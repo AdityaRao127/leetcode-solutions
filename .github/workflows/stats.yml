@@ -1,0 +1,229 @@
+name: 3. Update Stats
+
+on:
+  schedule:
+    - cron: "0 15 * * *"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Set Up Python
+        uses: actions/setup-python@v3
+
+      - name: Generate Stats
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y python3-pip
+          pip3 install matplotlib seaborn pandas numpy
+
+          mkdir -p images
+
+          python3 <<'EOF'
+          import os
+          import re
+          import statistics
+          import subprocess
+          from collections import defaultdict
+          from datetime import datetime
+          import pandas as pd
+          import matplotlib.pyplot as plt
+          import seaborn as sns
+          import matplotlib.dates as mdates
+          import numpy as np
+          
+          plt.style.use('dark_background')
+          
+          def create_transparent_figure(figsize=(10,6)):
+              fig, ax = plt.subplots(figsize=figsize)
+              fig.patch.set_alpha(0)
+              ax.patch.set_alpha(0)
+              return fig, ax
+          
+          def style_axes(ax):
+              for spine in ax.spines.values():
+                  spine.set_color('#CCCCCC')
+              ax.tick_params(colors='#CCCCCC')
+              ax.xaxis.label.set_color('#CCCCCC')
+              ax.yaxis.label.set_color('#CCCCCC')
+              ax.title.set_color('#CCCCCC')
+          
+          def get_leetcode_commit_dates():
+              try:
+                  cmd = ['git', 'log', '--pretty=format:%ad', '--date=iso', '--grep=^\\[LeetCode Sync\\]']
+                  result = subprocess.run(cmd, capture_output=True, text=True)
+                  dates = result.stdout.strip().split('\n')
+                  dates = [datetime.fromisoformat(d.split('+')[0].strip()) for d in dates if d]
+                  return dates
+              except Exception as e:
+                  print(f"Error getting commit dates: {e}")
+                  return []
+          
+          def parse_sync_details(txt_file):
+              rows = []
+              with open(txt_file, "r", encoding="utf-8") as f:
+                  for line in f:
+                      line = line.strip()
+                      if not line or line.startswith("#"):
+                          continue
+                      m = re.match(r"^(\d+):([\d.]+),([\d.]+),([\d.]+),([\d.]+)$", line)
+                      if m:
+                          rows.append({
+                              'problem': int(m.group(1)),
+                              'runtime': float(m.group(2)),
+                              'runtime_percentile': float(m.group(3)),
+                              'memory': float(m.group(4)),
+                              'memory_percentile': float(m.group(5))
+                          })
+              return pd.DataFrame(rows)
+          
+          def find_folder(pnum, base_dirs):
+              for d in base_dirs:
+                  if os.path.isdir(d):
+                      for name in os.listdir(d):
+                          path = os.path.join(d, name)
+                          if os.path.isdir(path):
+                              m = re.match(r"^(.*)-(\d{4})$", name)
+                              if m and int(m.group(2)) == int(pnum):
+                                  return name
+              return f"Problem-{pnum}"
+          
+          def count_files_and_lines(base_dirs, exts):
+              file_count = {e: 0 for e in exts}
+              for d in base_dirs:
+                  if os.path.isdir(d):
+                      for root, dirs, files in os.walk(d):
+                          for fname in files:
+                              for e in exts:
+                                  if fname.lower().endswith(e):
+                                      file_count[e] += 1
+              return file_count
+          
+          def plot_language_stats(lang_labels, file_counts):
+              fig, ax = plt.subplots(figsize=(6,6))
+              ax.pie(file_counts, labels=lang_labels, autopct='%1.1f%%', colors=sns.color_palette("bright"))
+              ax.set_title("Language Distribution", color='#CCCCCC', fontsize=14)
+              plt.savefig("images/lang_distribution.png", transparent=True, dpi=300, bbox_inches='tight')
+              plt.close()
+          
+          def plot_problem_progress_by_month():
+              dates = get_leetcode_commit_dates()
+              if not dates:
+                  print("No commit dates found.")
+                  return
+              monthly = defaultdict(int)
+              for d in dates:
+                  key = d.strftime('%Y-%m')
+                  monthly[key] += 1
+              months = sorted(monthly.keys())
+              monthly_series = [monthly[m] for m in months]
+              cumulative = []
+              total = 0
+              for count in monthly_series:
+                  total += count
+                  cumulative.append(total)
+              month_dates = [datetime.strptime(m, '%Y-%m') for m in months]
+              fig, ax = create_transparent_figure(figsize=(10,6))
+              ax.bar(month_dates, monthly_series, color='#4CAF50', alpha=0.3, width=20, label='Monthly Solved')
+              ax.plot(month_dates, cumulative, color='#2196F3', linewidth=2, marker='o', label='Cumulative Solved')
+              ax.set_title("Problem Solving Progress by Month", fontsize=14)
+              ax.set_xlabel("Month")
+              ax.set_ylabel("Problems Solved")
+              ax.xaxis.set_major_locator(mdates.MonthLocator())
+              ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
+              plt.xticks(rotation=45)
+              style_axes(ax)
+              ax.legend(loc='upper left')
+              plt.tight_layout()
+              plt.savefig("images/problem_progress.png", transparent=True, dpi=300, bbox_inches='tight')
+              plt.close()
+          
+          def plot_performance_distribution(df):
+              fig, (ax1, ax2) = plt.subplots(1,2, figsize=(14,5))
+              sns.kdeplot(data=df, x='runtime_percentile', fill=True, color='#42A5F5', ax=ax1)
+              ax1.set_title("Runtime Percentile Distribution", fontsize=14, color='#CCCCCC')
+              ax1.set_xlabel("Runtime Percentile", color='#CCCCCC')
+              ax1.set_ylabel("Density", color='#CCCCCC')
+              sns.kdeplot(data=df, x='memory_percentile', fill=True, color='#FFA726', ax=ax2)
+              ax2.set_title("Memory Percentile Distribution", fontsize=14, color='#CCCCCC')
+              ax2.set_xlabel("Memory Percentile", color='#CCCCCC')
+              ax2.set_ylabel("Density", color='#CCCCCC')
+              for a in (ax1, ax2):
+                  style_axes(a)
+              plt.tight_layout()
+              plt.savefig("images/performance_distribution.png", transparent=True, dpi=300, bbox_inches='tight')
+              plt.close()
+          
+          df = parse_sync_details("sync_details.txt")
+          if df.empty:
+              print("No valid entries in sync_details.txt.")
+              exit(0)
+          
+          base_dirs = ["Data Structures and Algorithms", "Database"]
+          exts = [".py", ".java", ".sql"]
+          
+          file_counts = count_files_and_lines(base_dirs, exts)
+          avg_rt = df['runtime'].mean()
+          avg_mem = df['memory'].mean()
+          
+          recent = df.sort_values(by='problem', ascending=False).head(10)
+          
+          plot_language_stats([e.replace('.', '').upper() for e in exts],
+                              [file_counts[e] for e in exts])
+          plot_problem_progress_by_month()
+          plot_performance_distribution(df)
+          
+          md = []
+          md.append("# LeetCode Progress Dashboard 📊")
+          md.append("\n## Recent Solutions")
+          for _, row in recent.iterrows():
+              folder = find_folder(row['problem'], base_dirs)
+              md.append(f"### {folder}")
+              md.append(f"- **Runtime:** `{row['runtime']:.2f}ms` (Top {row['runtime_percentile']:.2f}%)")
+              md.append(f"- **Memory:** `{row['memory']:.2f}MB` (Top {row['memory_percentile']:.2f}%)\n")
+          md.append("## Language Statistics")
+          for e in exts:
+              lang = e.replace('.', '').upper()
+              md.append(f"- **{lang}**: {file_counts[e]} files")
+          md.append(f"\n## Overall Performance")
+          md.append(f"- **Average Runtime:** {avg_rt:.2f}ms")
+          md.append(f"- **Average Memory:** {avg_mem:.2f}MB")
+          md.append("\n## Visualizations")
+          md.append("![Language Distribution](images/lang_distribution.png)")
+          md.append("![Problem Progress by Month](images/problem_progress.png)")
+          md.append("![Performance Distribution](images/performance_distribution.png)")
+          md.append("\n---")
+          md.append("\n## How to Use")
+          md.append("1. Fork this repository, then go to [LeetCode](https://leetcode.com) and log in to your account")
+          md.append("2. Open Developer Tools (F12 or right-click -> Inspect)")
+          md.append("3. Go to the Application tab and refresh the page")
+          md.append("4. In the Cookies section, find:")
+          md.append("   - `LEETCODE_SESSION`")
+          md.append("   - `csrftoken`")
+          md.append("5. In your repository's Settings → Secrets and Variables → Actions, add:")
+          md.append("   - `LEETCODE_SESSION` (from cookies)")
+          md.append("   - `LEETCODE_CSRF_TOKEN` (from cookies)")
+          md.append("6. In Settings → Actions → General, enable 'Read and write permissions'")
+          md.append("7. The workflow runs daily at 15:00 UTC to update your stats.\n")
+          md.append("## Credits")
+          md.append("This project uses [LeetCode Sync](https://github.com/marketplace/actions/leetcode-sync) to fetch solutions, runtime, and memory usage data from LeetCode.")
+          
+          with open("README.md", "w", encoding="utf-8") as f:
+              f.write("\n".join(md))
+          EOF
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md images
+          git commit -m "Update stats and visuals" || echo "No changes"
+          git pull --rebase
+          git push

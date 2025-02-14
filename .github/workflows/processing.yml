@@ -1,0 +1,98 @@
+name: 2. Process Solutions
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "1 16 * * *" # adjust as needed
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Pull Latest Changes
+        run: git pull --rebase
+
+      - name: Organize Solutions
+        run: |
+          mkdir -p "Data Structures and Algorithms" "Database"
+          if [ -d "temp_solutions" ]; then
+            for p in temp_solutions/*; do
+              if [ -d "$p" ]; then
+                folderName=$(basename "$p")
+                if [[ "$folderName" =~ ^([0-9]+)-(.*)$ ]]; then
+                  num="${BASH_REMATCH[1]}"
+                  slug="${BASH_REMATCH[2]}"
+                  newName="${slug}-$(printf "%04d" "$((10#$num))")"
+                  mv "$p" "temp_solutions/$newName"
+                  p="temp_solutions/$newName"
+                  folderName="$newName"
+                fi
+                if ls "$p"/*.sql 1>/dev/null 2>&1; then
+                  mv "$p" "Database/$folderName"
+                else
+                  mv "$p" "Data Structures and Algorithms/$folderName"
+                fi
+              fi
+            done
+            rm -rf temp_solutions
+          fi
+
+      - name: Process Each Solution Folder
+        run: |
+          set -e
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          declare -A details
+          while IFS=':' read -r prob metrics; do
+            if [[ $prob =~ ^[0-9]+$ ]] && [ -n "$metrics" ]; then
+              prob=$(printf "%04d" "$((10#$prob))")
+              details["$prob"]="$metrics"
+            fi
+          done < <(sed 's/# LeetCode Solution Details //' sync_details.txt | tr ' ' '\n' | grep -v '^$' | sed 's/\([0-9]\+\):/\1:/')
+
+          categories=("Data Structures and Algorithms" "Database")
+          for c in "${categories[@]}"; do
+            [ -d "$c" ] || continue
+            for folder in "$c"/*; do
+              [ -d "$folder" ] || continue
+              base=$(basename "$folder")
+
+              if [[ "$base" =~ -([0-9]{4})$ ]]; then
+                probnum="${BASH_REMATCH[1]}"
+                if [ -n "${details[$probnum]}" ]; then
+                  IFS=',' read rt rtpct mem mempct <<< "${details[$probnum]}"
+                  if (( $(echo "$rtpct < 25" | bc -l) )); then re="🚀"
+                  elif (( $(echo "$rtpct < 50" | bc -l) )); then re="⚡"
+                  elif (( $(echo "$rtpct < 75" | bc -l) )); then re="🔥"
+                  else re="ᯓ★"
+                  fi
+
+                  if (( $(echo "$mempct < 25" | bc -l) )); then me="❄️"
+                  elif (( $(echo "$mempct < 50" | bc -l) )); then me="🌱"
+                  elif (( $(echo "$mempct < 75" | bc -l) )); then me="⚠️"
+                  else me="❗️"
+                  fi
+
+                  commitMsg="Runtime: ${rt}ms (${rtpct}%) $re | Memory: ${mem}MB (${mempct}%) $me"
+                  echo "Committing $folder: $commitMsg"
+                  git add "$folder"
+                  if ! git diff --cached --quiet; then
+                    git commit -m "$commitMsg"
+                  fi
+                fi
+              fi
+            done
+          done
+
+      - name: Push Changes
+        run: |
+          git stash --include-untracked
+          git pull --rebase
+          git stash pop || true
+          git push

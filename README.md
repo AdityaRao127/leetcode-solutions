@@ -57,18 +57,6 @@
 
 ---
 
-## How to Use
-1. Fork this repository, then go to [LeetCode](https://leetcode.com) and log in to your account
-2. Open Developer Tools (F12 or right-click -> Inspect)
-3. Go to the Application tab and refresh the page
-4. In the Cookies section, find:
-   - `LEETCODE_SESSION`
-   - `csrftoken`
-5. In your repository's Settings → Secrets and Variables → Actions, add:
-   - `LEETCODE_SESSION` (from cookies)
-   - `LEETCODE_CSRF_TOKEN` (from cookies)
-6. In Settings → Actions → General, enable 'Read and write permissions'
-7. The workflow runs daily at 15:00 UTC to update your stats.
-
+## How to Use: https://github.com/AdityaRao127/leetcode-stats-automation
 ## Credits
 This project uses [LeetCode Sync](https://github.com/marketplace/actions/leetcode-sync) to fetch solutions, runtime, and memory usage data from LeetCode.

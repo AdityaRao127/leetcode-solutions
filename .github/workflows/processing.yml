@@ -33,14 +33,20 @@ jobs:
                   folderName="$newName"
                 fi
                 if ls "$p"/*.sql 1>/dev/null 2>&1; then
-                  mv -T "$p" "Database/$folderName"
+                  dest="Database/$folderName"
                 else
-                  mv -T "$p" "Data Structures and Algorithms/$folderName"
+                  dest="Data Structures and Algorithms/$folderName"
+                fi
+                if [ -d "$dest" ]; then
+                  rsync -a "$p"/ "$dest"/ && rm -rf "$p"
+                else
+                  mv "$p" "$dest"
                 fi
               fi
             done
             rm -rf temp_solutions
           fi
+
 
       - name: Process Each Solution Folder
         run: |

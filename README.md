@@ -42,13 +42,13 @@
 - **Memory:** `65.60MB` (Top 66.95%)
 
 ## Language Statistics
-- **PY**: 58 files
+- **PY**: 68 files
 - **JAVA**: 22 files
 - **SQL**: 20 files
 
 ## Overall Performance
-- **Average Runtime:** 255.02ms
-- **Average Memory:** 31.67MB
+- **Average Runtime:** 215.53ms
+- **Average Memory:** 29.82MB
 
 ## Visualizations
 ![Language Distribution](images/lang_distribution.png)

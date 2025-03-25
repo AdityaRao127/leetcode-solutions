@@ -11,3 +11,5 @@ class Solution:
             a = b
             b=temp
         return b
+
+    # "Start with 1 and 2, then slide the window summing previous two."

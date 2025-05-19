@@ -6,10 +6,8 @@ class Solution:
         if 0 not in nums:
             return 0
 
-        for i in range(1, n):
-            if nums[i] - nums[i - 1] != 1:
-                return nums[i - 1] + 1
-
-        return n
-
-
+        for i in range(n-1):
+            if (nums[i] + 1 )!= nums[i+1]:
+                return i+1
+        
+        return nums[-1] +1

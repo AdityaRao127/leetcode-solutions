@@ -4,10 +4,11 @@ class Solution:
 
         for i in range(len(nums)):
             complement = target - nums[i]
-
+        
             if(complement in numMap):
-                return [numMap[complement], i]
-            
-            numMap[nums[i]] = i 
+                return [i, numMap[complement]]
+
+            else:
+                numMap[nums[i]] = i
 
         return []

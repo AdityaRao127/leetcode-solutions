@@ -52,7 +52,7 @@
 
 ## Visualizations
 ![Language Distribution](images/lang_distribution.png)
-![Problem Progress by Month](images/problem_progress.png)
+![Problem Progress by Month](images/problem_progress.png) 
 ![Performance Distribution](images/performance_distribution.png)
 
 ---

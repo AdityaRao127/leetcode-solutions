@@ -47,8 +47,8 @@
 - **SQL**: 29 files
 
 ## Overall Performance
-- **Average Runtime:** 192.25ms
-- **Average Memory:** 25.16MB
+- **Average Runtime:** 191.78ms
+- **Average Memory:** 25.20MB
 
 ## Visualizations
 ![Language Distribution](images/lang_distribution.png)

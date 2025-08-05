@@ -2,8 +2,7 @@ name: 1. Update Solutions
 on:
   workflow_dispatch:
   schedule: #run this workflow one after another (2 times total) if you want the solutions to be updated properly (the first time). otherwies, you can ignore and it will run daily
-    - cron: "45 15 * * *" # the text file wont update the initial run. from then on, it'll update properly. But loading all the solutions will take time
-    - cron: "55 15 * * *" 
+    - cron: "45 15 * * 0" # the text file wont update the initial run. from then on, it'll update properly. But loading all the solutions will take time
 
 jobs:
   build:

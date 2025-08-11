@@ -17,6 +17,7 @@ jobs:
       - name: Sync LeetCode Solutions
         id: sync
         uses: joshcai/leetcode-sync@v1.7
+        continue-on-error: true
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           leetcode-csrf-token: ${{ secrets.LEETCODE_CSRF_TOKEN }}
@@ -25,12 +26,35 @@ jobs:
           verbose: true
           commit-header: "[LeetCode Sync]"
 
+      - name: Check Sync Status
+        run: |
+          if [ "${{ steps.sync.outcome }}" == "failure" ]; then
+            echo "❌ LeetCode sync failed. This usually means:"
+            echo "   1. LEETCODE_CSRF_TOKEN is expired or invalid"
+            echo "   2. LEETCODE_SESSION is expired or invalid"
+            echo "   3. LeetCode API structure has changed"
+            echo ""
+            echo "To fix this:"
+            echo "   1. Log into LeetCode in your browser"
+            echo "   2. Open Developer Tools (F12)"
+            echo "   3. Go to Network tab and refresh the page"
+            echo "   4. Find a request to leetcode.com and copy the 'csrftoken' and 'LEETCODE_SESSION' cookies"
+            echo "   5. Update the repository secrets with the new values"
+            echo ""
+            echo "⏭️  Skipping solution processing steps since no new solutions were synced."
+            exit 0
+          else
+            echo "✅ LeetCode sync completed successfully"
+          fi
+
       - name: Wait for Commit Propagation
+        if: steps.sync.outcome == 'success'
         run: |
           echo "Waiting for commit messages to propagate..."
           sleep 15
           git fetch --all
       - name: Create Sync Details File
+        if: steps.sync.outcome == 'success'
         run: |
           # Initialize file with header
           echo "# LeetCode Solution Details" > sync_details.txt
@@ -66,16 +90,19 @@ jobs:
             (head -n1 sync_details.txt && tail -n +2 sync_details.txt | sort -t: -k1n) > temp && mv temp sync_details.txt
           fi
       - name: Display Sync Details
+        if: steps.sync.outcome == 'success'
         run: |
           echo "Contents of sync_details.txt:"
           cat sync_details.txt
       - name: Commit Sync Details
+        if: steps.sync.outcome == 'success'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add sync_details.txt
           git commit -m "Update sync details" || echo "No sync detail changes"
       - name: Push Changes
+        if: steps.sync.outcome == 'success'
         run: |
           max_attempts=3
           attempt=1

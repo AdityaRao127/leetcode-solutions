@@ -45,7 +45,13 @@ def load_all_sources() -> pd.DataFrame:
     df = pd.concat(frames, ignore_index=True)
     # Normalize columns
     rows = [normalize_record(r._asdict() if hasattr(r, "_asdict") else dict(r)) for r in df.to_dict(orient="records")]
-    return pd.DataFrame(rows)
+    df_normalized = pd.DataFrame(rows)
+    # Ensure proper string columns to avoid dtype issues
+    string_cols = ["Company", "Position Title", "Posted", "Description", "Careers Page URL", "Third Party URL", "URL", "Source", "Location", "Salary"]
+    for col in string_cols:
+        if col in df_normalized.columns:
+            df_normalized[col] = df_normalized[col].astype(str)
+    return df_normalized
 
 async def resolve_missing_careers(df: pd.DataFrame) -> pd.DataFrame:
     need = df["Careers Page URL"].fillna("").eq("")
@@ -54,6 +60,8 @@ async def resolve_missing_careers(df: pd.DataFrame) -> pd.DataFrame:
     urls = await asyncio.gather(*tasks)
     # Convert None to empty string to avoid dtype issues
     urls = [url or "" for url in urls]
+    # Convert column to object dtype to handle string assignment
+    df["Careers Page URL"] = df["Careers Page URL"].astype(str)
     df.loc[need, "Careers Page URL"] = urls
     df["URL"] = df["Careers Page URL"].fillna("")  # may be empty; downstream will fallback
     df.loc[df["URL"].eq(""), "URL"] = df["Third Party URL"].fillna("")

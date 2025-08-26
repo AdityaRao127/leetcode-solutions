@@ -1,0 +1,13 @@
+# Virtual env and caches
+venv/
+.env
+__pycache__/
+.joblib_cache/
+*.parquet
+
+# Local caches preserved (kept under version control ignore)
+career_page_cache.json
+job_descriptions_cache.json
+job_scores_cache.json
+linkedin_job_ids.json
+previously_sent_jobs.json

@@ -1,0 +1,4 @@
+Company,Position Title,Posted,Description,Careers Page URL,Third Party URL,URL,Source,Match Score,Location,Salary,Stage1,Stage2
+Example Corp,Software Engineer Intern,2024-12-01,"Python, machine learning, web development internship",,https://linkedin.com/jobs/example1,https://linkedin.com/jobs/example1,linkedin,0.6906666666666668,"San Francisco, CA",$50-60/hour,0.8066666666666666,0.6133333333333334
+Tech Startup,ML Engineer Intern,2024-12-02,"Machine learning, AI, data science internship",,https://linkedin.com/jobs/example2,https://linkedin.com/jobs/example2,linkedin,0.8140259740259741,Remote,$55-65/hour,1.333766233766234,0.4675324675324676
+DataCorp,Data Analyst Intern,2024-12-01,"SQL, Tableau, data analysis internship opportunity",,https://indeed.com/jobs/datacorp1,https://indeed.com/jobs/datacorp1,boolean,0.43169811320754725,"New York, NY",$45-55/hour,0.5698113207547171,0.339622641509434
